@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/project-banner.svg" alt="小团语音唤醒：从模型适配到实时监听" width="100%"></p>
 
-<p align="center"><a href="#现场演示">现场演示</a> &nbsp; / &nbsp; <a href="小团语音唤醒_本地实现与工程能力详解.md">技术文档</a> &nbsp; / &nbsp; <a href="https://github.com/woaijieyang/0002_Barging-in_xiaotuan_yuyinhuanxing/raw/refs/heads/main/downloads/xiaotuan-reader.zip">交互阅读包 ↓</a></p>
+<p align="center"><a href="https://woaijieyang.github.io/0002_Barging-in_xiaotuan_yuyinhuanxing/">在线阅读</a> &nbsp; / &nbsp; <a href="#现场演示">现场演示</a> &nbsp; / &nbsp; <a href="小团语音唤醒_本地实现与工程能力详解.md">技术文档</a> &nbsp; / &nbsp; <a href="https://github.com/woaijieyang/0002_Barging-in_xiaotuan_yuyinhuanxing/raw/refs/heads/main/downloads/xiaotuan-reader.zip">交互阅读包 ↓</a></p>
 
 这个项目围绕一句“小团小团”展开：把已有的语音模型接到持续的麦克风输入上，让识别结果成为后续交互的入口。我以 [ModelScope 的字符级 cFSMN](https://modelscope.cn/models/iic/speech_charctc_kws_phone-xiaoyun) 为起点，主要完成数据处理、目标微调、模型接口适配和本地监听流程的实现。
 
@@ -77,4 +77,4 @@ https://github.com/user-attachments/assets/8d169a57-31b6-458a-b28c-f530791fc4c6
 - [部署接口与调试案例](小团语音唤醒_本地实现与工程能力详解.md#debug)
 - [完整参数手册](小团语音唤醒_本地实现与工程能力详解.md#dictionary)
 
-交互阅读版支持参数搜索、图表放大和结构计算。下载上方阅读包，解压后打开其中的HTML即可使用。
+[在线阅读完整技术文档](https://woaijieyang.github.io/0002_Barging-in_xiaotuan_yuyinhuanxing/)，可直接使用参数搜索、图表放大和结构计算。也可以下载上方阅读包，解压后打开其中的 HTML 离线阅读。
