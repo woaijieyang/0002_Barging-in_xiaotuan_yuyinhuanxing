@@ -17,7 +17,6 @@ https://github.com/user-attachments/assets/03e47ff2-b7bf-4b1b-bcbd-92f4bfeeeafb
 
 https://github.com/user-attachments/assets/8d169a57-31b6-458a-b28c-f530791fc4c6
 
-<p align="center"><a href="https://github.com/user-attachments/assets/8d169a57-31b6-458a-b28c-f530791fc4c6">▶ 观看短片</a></p>
 
 </details>
 
