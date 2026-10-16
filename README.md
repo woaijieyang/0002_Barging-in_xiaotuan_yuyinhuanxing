@@ -8,16 +8,16 @@
 
 ### 一段现场交互
 
-[![▶ 观看现场交互](media/demo-interaction.jpg)](media/demo-interaction.mp4)
+https://github.com/user-attachments/assets/03e47ff2-b7bf-4b1b-bcbd-92f4bfeeeafb
 
-[▶ 观看视频](media/demo-interaction.mp4) · 1 分 42 秒
+[▶ 观看视频](https://github.com/user-attachments/assets/03e47ff2-b7bf-4b1b-bcbd-92f4bfeeeafb) · 1 分 42 秒
 
 <details>
 <summary>另一个现场片段 · 13 秒</summary>
 
-<p align="center"><a href="media/demo-short.mp4"><img src="media/demo-short.jpg" alt="▶ 观看现场短片" width="280"></a></p>
+https://github.com/user-attachments/assets/8d169a57-31b6-458a-b28c-f530791fc4c6
 
-<p align="center"><a href="media/demo-short.mp4">▶ 观看短片</a></p>
+<p align="center"><a href="https://github.com/user-attachments/assets/8d169a57-31b6-458a-b28c-f530791fc4c6">▶ 观看短片</a></p>
 
 </details>
 
