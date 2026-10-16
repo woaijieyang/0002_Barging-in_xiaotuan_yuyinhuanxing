@@ -1,0 +1,17 @@
+sequenceDiagram
+participant M as 麦克风回调
+participant B as 1.5秒缓冲
+participant P as 推理主循环
+participant S as 唤醒状态
+M->>B: 每200ms写入3200点
+M-->>P: Event通知
+P->>B: 读取当前窗口
+P->>P: 特征与模型推理
+P->>S: 按帧更新期待字符
+alt 目标匹配
+S-->>P: 唤醒事件
+Note over M,P: 主循环冷却1秒时，采集回调仍可继续
+P->>B: 清空缓冲
+else 未匹配
+S-->>P: 继续监听
+end

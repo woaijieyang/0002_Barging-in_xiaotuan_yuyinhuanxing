@@ -1,0 +1,12 @@
+flowchart TB
+subgraph V[先保证标签语义一致]
+direction LR
+A["小 / 团<br/>文件ID 1463 / 1329"] --> B["read_token统一减1"] --> C["网络ID 1462 / 1328"]
+end
+subgraph P[再理解时序对齐]
+direction LR
+D["blank 小 小 blank 团 小 团"] --> E["合并相邻重复<br/>再删除blank"] --> F["小 团 小 团"]
+end
+V --> P
+class B,C,E focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

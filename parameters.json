@@ -1,0 +1,1947 @@
+[
+  {
+    "group": "运行框架",
+    "key": "framework",
+    "value": "pytorch",
+    "meaning": "pytorch决定使用的模型框架",
+    "reason": "沿用训练与权重存储格式",
+    "effect": "换框架需要转换算子和权重",
+    "check": "检查加载器与权重格式",
+    "related": ""
+  },
+  {
+    "group": "任务注册",
+    "key": "task",
+    "value": "keyword-spotting",
+    "meaning": "keyword-spotting表示关键词检测",
+    "reason": "让框架选择对应任务组件",
+    "effect": "不是关键词本身，不改变字符ID",
+    "check": "检查注册的模型和训练器",
+    "related": ""
+  },
+  {
+    "group": "推理入口",
+    "key": "pipeline.type",
+    "value": "kws-kwsbp",
+    "meaning": "kws-kwsbp是原生资源推理流水线",
+    "reason": "连接已打包的资源与识别器",
+    "effect": "它不等同于返回logits的PyTorch计算模块",
+    "check": "检查pipeline返回值和资源路径",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.type",
+    "value": "speech_kws_fsmn_char_ctc_nearfield",
+    "meaning": "近场字符CTC模型注册名",
+    "reason": "使用现成字符级声学建模和训练实现",
+    "effect": "更换模型类型会改变构造器、前端和权重契约",
+    "check": "确认实例化后的真实子模块",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.input_dim",
+    "value": 400,
+    "meaning": "每个网络时间步的特征宽度400",
+    "reason": "80个频带拼接前2帧、当前帧、后2帧，共5帧",
+    "effect": "修改时需要同步输入层权重形状与CMVN长度",
+    "check": "断言输入最后一维等于400",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.type",
+    "value": "fsmn",
+    "meaning": "fsmn记忆网络类型",
+    "reason": "保留上游轻量声学基座以复用权重",
+    "effect": "换网络需要新的训练和部署验证",
+    "check": "检查层类型与checkpoint键",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.input_affine_dim",
+    "value": 140,
+    "meaning": "首个仿射层输出140维",
+    "reason": "对400维输入先做映射，沿用基座形状",
+    "effect": "加宽会增加输入层和下一层参数，已有权重不再完整匹配",
+    "check": "比较两层权重矩阵形状",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.num_layers",
+    "value": 4,
+    "meaning": "串联4个记忆块",
+    "reason": "在表达能力与计算开销之间沿用基座取舍",
+    "effect": "更多层增加计算与上下文跨度，识别效果需要通过相同测试集比较",
+    "check": "计算参数量并做延迟、漏检对照",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.linear_dim",
+    "value": 250,
+    "meaning": "记忆块之间传递250维表示",
+    "reason": "保留上下游层的统一宽度",
+    "effect": "加宽会增加投影和恢复层参数",
+    "check": "检查每个块输入输出形状",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.proj_dim",
+    "value": 128,
+    "meaning": "将250维投影到128维进行记忆滤波",
+    "reason": "在较低维度存储时间上下文以控制成本",
+    "effect": "增大提高容量与参数量；固定其他设置时每增1维共增2048个参数",
+    "check": "使用参数实验室核算并检查权重形状",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.left_order",
+    "value": 10,
+    "meaning": "左滤波含当前帧在内的10个抽头",
+    "reason": "覆盖当前与9个过去网络时间步",
+    "effect": "增大增加历史缓存和计算，不直接增加未来等待；每增1增加512个参数",
+    "check": "用脉冲输入检查历史影响范围",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.right_order",
+    "value": 2,
+    "meaning": "每层2个未来抽头",
+    "reason": "借用后续声音帮助当前帧判别",
+    "effect": "每增1增加512个参数；4层串联的未来跨度增加120ms",
+    "check": "在固定音频上比较右端边界和输出等待",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.left_stride",
+    "value": 1,
+    "meaning": "相邻左抽头间隔1个网络步",
+    "reason": "连续采样历史信息",
+    "effect": "增大扩大历史覆盖但变稀疏，滤波权重数量不变",
+    "check": "核对卷积dilation和缓存长度",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.right_stride",
+    "value": 1,
+    "meaning": "未来抽头间隔1个网络步",
+    "reason": "沿用相邻未来帧信息",
+    "effect": "增大扩大未来跨度，可能增加等待；不增加抽头数量",
+    "check": "计算future span并核对时间戳",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.backbone.output_affine_dim",
+    "value": 140,
+    "meaning": "分类前映射到140维",
+    "reason": "压缩到较小表示再输出2599类",
+    "effect": "加宽主要增大分类头参数",
+    "check": "核对250→140→2599矩阵",
+    "related": ""
+  },
+  {
+    "group": "网络结构",
+    "key": "model.output_dim",
+    "value": 2599,
+    "meaning": "2599个字符及特殊符号类别",
+    "reason": "保留通用字符输出，目标词通过标签和解码定义",
+    "effect": "改为4类会改变输出头和checkpoint形状，需要重新训练相应参数",
+    "check": "输出最后一维必须为2599",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.filter_conf.max_length",
+    "value": 1500,
+    "meaning": "最大1500个10ms长度单位，约15秒",
+    "reason": "排除过长录音，控制批内填充和计算",
+    "effect": "增大允许更长输入，但显存与填充开销可能上升",
+    "check": "按波形时长检查被过滤样本",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.filter_conf.min_length",
+    "value": 10,
+    "meaning": "最小10个10ms长度单位，约0.1秒",
+    "reason": "过滤几乎没有有效语音的输入",
+    "effect": "提高可能丢弃短词；降低可能引入空白片段",
+    "check": "统计过滤前后条数和短样本",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.feature_extraction_conf.feature_type",
+    "value": "fbank",
+    "meaning": "fbank对数Mel滤波器组特征",
+    "reason": "与预训练模型的输入分布一致",
+    "effect": "改用MFCC或直接频谱时，需要重新匹配输入分布与模型权重",
+    "check": "用相同录音比较前端输出",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.feature_extraction_conf.num_mel_bins",
+    "value": 80,
+    "meaning": "每帧80个Mel频带",
+    "reason": "保留基座的频率表示",
+    "effect": "改变会联动400维输入和CMVN；频带更多不是自动更准",
+    "check": "检查Fbank形状[T,80]",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.feature_extraction_conf.frame_shift",
+    "value": 10,
+    "meaning": "相邻基础帧前进10ms",
+    "reason": "用重叠窗口观察连续发音",
+    "effect": "增大降低时间分辨率和帧数；联动降帧后时间步",
+    "check": "核对16k下160采样点步长",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.feature_extraction_conf.frame_length",
+    "value": 25,
+    "meaning": "每个分析窗口25ms",
+    "reason": "在短时间内近似语音平稳",
+    "effect": "增大提高频率分辨能力但减弱时间定位；改变输入分布",
+    "check": "核对每窗400采样点",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.feature_extraction_conf.dither",
+    "value": 1.0,
+    "meaning": "提特征时加入幅度1.0的小随机扰动",
+    "reason": "在PCM数值尺度下避免纯静音的数值退化",
+    "effect": "若输入错误地缩放到[-1,1]，同样的1会成为很大扰动",
+    "check": "同时检查波形幅度与Fbank实现",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.spec_aug",
+    "value": true,
+    "meaning": "训练特征遮挡开关",
+    "reason": "让模型减少对局部频带和时间片段的依赖",
+    "effect": "关闭后减少训练扰动；开启时需要观察短词信息是否被过度遮挡",
+    "check": "训练开、验证与测试关闭并对照",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.spec_aug_conf.num_t_mask",
+    "value": 2,
+    "meaning": "每条特征执行2次时间遮挡",
+    "reason": "制造局部时间缺失的训练扰动",
+    "effect": "增加会遮住更多有效词信息，短唤醒词尤其敏感",
+    "check": "可视化增强前后特征",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.spec_aug_conf.num_f_mask",
+    "value": 2,
+    "meaning": "每条特征执行2次频率遮挡",
+    "reason": "减少对单一频带的依赖",
+    "effect": "增加增强强度，也可能损失区分发音的线索",
+    "check": "检查实际遮挡频带与重叠",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.spec_aug_conf.max_t",
+    "value": 50,
+    "meaning": "每次时间遮挡长度随机为1到50个基础帧",
+    "reason": "代码在拼接与降帧前遮挡，50帧对应约500ms步长跨度",
+    "effect": "增大可能覆盖完整音节；它不是50个30ms网络步",
+    "check": "结合短词长度检查500ms遮挡是否过强",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.spec_aug_conf.max_f",
+    "value": 30,
+    "meaning": "每次最多遮挡30个Mel频带",
+    "reason": "在80维频率表示内作扰动",
+    "effect": "增大频率信息损失更多，两次遮挡可能重叠",
+    "check": "检查80维输入的实际掩码",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.shuffle",
+    "value": true,
+    "meaning": "训练样本缓冲打乱开关",
+    "reason": "降低固定输入顺序的影响",
+    "effect": "关闭可能造成按正负类别顺序训练",
+    "check": "检查每个epoch的样本顺序",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "preprocessor.shuffle_conf.shuffle_size",
+    "value": 1500,
+    "meaning": "缓冲1500条后局部打乱",
+    "reason": "在内存占用和混合程度之间取舍",
+    "effect": "更大更接近全局打乱，同时增加缓冲占用",
+    "check": "核对内存和类别混合情况",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.context_expansion",
+    "value": true,
+    "meaning": "开启上下文拼接",
+    "reason": "把相邻基础帧打包给网络",
+    "effect": "关闭后只有80维，与400维输入层不符",
+    "check": "核对拼接开关与input_dim一起变化",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.context_expansion_conf.left",
+    "value": 2,
+    "meaning": "向前取2个基础帧",
+    "reason": "补充前20ms的局部变化",
+    "effect": "增加一帧增加80维输入；联动输入层及CMVN",
+    "check": "检查起始处边界复制",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.context_expansion_conf.right",
+    "value": 2,
+    "meaning": "向后取2个基础帧",
+    "reason": "补充后20ms的局部变化",
+    "effect": "增加一帧增加80维输入和10ms未来跨度",
+    "check": "检查右边界补帧与真实在线等待",
+    "related": ""
+  },
+  {
+    "group": "声学前端",
+    "key": "preprocessor.frame_skip",
+    "value": 3,
+    "meaning": "每3个基础帧保留一个拼接结果",
+    "reason": "将网络时间步从10ms变成30ms以减少计算",
+    "effect": "改为1时网络帧数约增3倍；时间语义和训练分布同时改变",
+    "check": "训练与部署必须统一抽帧规则",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "preprocessor.batch_conf.batch_size",
+    "value": 64,
+    "meaning": "数据处理器每批打包64条录音",
+    "reason": "从上游256调小，降低每批占用",
+    "effect": "批小更新更频繁，梯度与填充开销也变化；这里不是token预算",
+    "check": "追踪processor.batch，它实际消费该字段",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "dataset.train.name",
+    "value": "kws_xiaoyunxiaoyun",
+    "meaning": "上游数据集的名称或split元数据",
+    "reason": "项目数据由train_data/cv_data参数给出",
+    "effect": "此名字不说明项目实际使用了上游样本",
+    "check": "核对传入的wav.scp及转录文件",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "dataset.train.split",
+    "value": "train",
+    "meaning": "上游数据集的名称或split元数据",
+    "reason": "项目数据由train_data/cv_data参数给出",
+    "effect": "此名字不说明项目实际使用了上游样本",
+    "check": "核对传入的wav.scp及转录文件",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "dataset.val.name",
+    "value": "kws_xiaoyunxiaoyun",
+    "meaning": "上游数据集的名称或split元数据",
+    "reason": "项目数据由train_data/cv_data参数给出",
+    "effect": "此名字不说明项目实际使用了上游样本",
+    "check": "核对传入的wav.scp及转录文件",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "dataset.val.split",
+    "value": "val",
+    "meaning": "上游数据集的名称或split元数据",
+    "reason": "项目数据由train_data/cv_data参数给出",
+    "effect": "此名字不说明项目实际使用了上游样本",
+    "check": "核对传入的wav.scp及转录文件",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.max_epochs",
+    "value": 55,
+    "meaning": "保存配置上限55，v2脚本改为10",
+    "reason": "限制训练总轮数，是版本迭代中的显式设置",
+    "effect": "更大不保证更好；保存的44条元数据跨epoch0—48，不等于55轮完整记录",
+    "check": "以运行配置和epoch记录对应版本",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.dataloader.batch_size_per_gpu",
+    "value": 256,
+    "meaning": "通用配置字段仍为256",
+    "reason": "保留了上游字段，但该专用训练器DataLoader设batch_size=None",
+    "effect": "实际打包数量由preprocessor.batch_conf.batch_size控制",
+    "check": "检查专用训练器DataLoader构造",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.dataloader.workers_per_gpu",
+    "value": 4,
+    "meaning": "训练数据加载使用4个worker",
+    "reason": "并行解码与预处理，减轻主线程等待",
+    "effect": "增加可能提高吞吐，也增加CPU/内存竞争",
+    "check": "测CPU、加载等待和batch吞吐",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.dataloader.prefetch",
+    "value": 2,
+    "meaning": "每个worker预取2批",
+    "reason": "提前准备后续数据",
+    "effect": "增大增加预取内存，不必然提速",
+    "check": "观察数据等待与内存峰值",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.optimizer.type",
+    "value": "Adam",
+    "meaning": "配置注明Adam",
+    "reason": "该近场训练器直接构造optim.Adam",
+    "effect": "只改type字符串不会自动切换优化器",
+    "check": "检查实际构造函数",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.optimizer.lr",
+    "value": 0.0001,
+    "meaning": "初始学习率0.0001",
+    "reason": "相比上游0.001用较小更新幅度适配目标任务",
+    "effect": "过大可能破坏已有表征，过小收敛慢；恢复checkpoint元数据可能覆盖初值",
+    "check": "记录每轮实际lr而非只看配置",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.optimizer.weight_decay",
+    "value": 1e-05,
+    "meaning": "Adam的weight decay为0.00001",
+    "reason": "相比上游0.0001更弱的L2约束",
+    "effect": "增大时加强参数收缩；训练器使用Adam的weight decay，与AdamW的更新方式有区别",
+    "check": "对照验证损失与误触发，不仅看训练损失",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.optimizer.grad_clip",
+    "value": 5.0,
+    "meaning": "梯度范数裁剪上限5",
+    "reason": "限制异常大梯度对一次更新的影响",
+    "effect": "太小可能持续压制更新，太大保护作用变弱",
+    "check": "记录裁剪前范数和非有限值",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "train.optimizer.grad_accum",
+    "value": 1,
+    "meaning": "每1批更新一次，无跨批累积",
+    "reason": "保持简单直接的更新节奏",
+    "effect": "增大会改变更新频率及等效批量，需核对损失缩放",
+    "check": "统计backward与optimizer.step次数",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.type",
+    "value": "ReduceLROnPlateau",
+    "meaning": "配置写ReduceLROnPlateau",
+    "reason": "该训练器直接创建同名调度器",
+    "effect": "更改字符串不会改变已硬编码的构造逻辑",
+    "check": "检查lr_scheduler实际调用",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.mode",
+    "value": "min",
+    "meaning": "min表示希望验证损失降低",
+    "reason": "训练器使用cv_loss驱动调度",
+    "effect": "配置字段本身未传入，该值在训练器中写死",
+    "check": "核对step(cv_loss)而非分类准确率",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.factor",
+    "value": 0.5,
+    "meaning": "调度时学习率乘0.5",
+    "reason": "代码硬编码减半策略",
+    "effect": "改配置字段未必生效；真正改变后会影响降速幅度",
+    "check": "对照逐epoch学习率记录",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.patience",
+    "value": 3,
+    "meaning": "调度耐心值3",
+    "reason": "代码使用验证损失停滞信号触发降学习率",
+    "effect": "不要与EarlyStoppingHook的5混淆；这是调度而不是停训",
+    "check": "检查坏epoch计数及PyTorch版本行为",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.min_lr",
+    "value": 1e-06,
+    "meaning": "最小学习率0.000001",
+    "reason": "防止学习率持续降到极小",
+    "effect": "该值在训练器中硬编码，配置修改需检查实际消费",
+    "check": "观察学习率是否达到下限",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.threshold",
+    "value": 0.01,
+    "meaning": "损失改善判定阈值0.01",
+    "reason": "调度器用相对改善规则，未显式改threshold_mode",
+    "effect": "它控制验证损失的相对改善判定，与关键词检测分数阈值分开使用",
+    "check": "核对调度器默认rel模式及best值",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler.verbose",
+    "value": true,
+    "meaning": "通用配置要求输出调度日志",
+    "reason": "便于观察学习率变化的意图",
+    "effect": "该训练器未将此字段传入调度器",
+    "check": "以实际日志输出为准",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler_hook.type",
+    "value": "PlateauLrSchedulerHook",
+    "meaning": "通用PlateauLrSchedulerHook类型",
+    "reason": "属于通用hook配置意图",
+    "effect": "该训练器走手写循环，没有执行这一hook列表",
+    "check": "检查训练控制流",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.lr_scheduler_hook.metric_key",
+    "value": "avg_loss",
+    "meaning": "通用hook指标名avg_loss",
+    "reason": "用于通用训练框架时指定监控项",
+    "effect": "实际专用循环直接用cv_loss，不按此字段取值",
+    "check": "不要混用avg_loss与cv_loss名称",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[0].type",
+    "value": "CheckpointHook",
+    "meaning": "CheckpointHook保存模型状态",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[0].interval",
+    "value": 1,
+    "meaning": "意图每1轮执行一次模型保存",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[1].type",
+    "value": "TextLoggerHook",
+    "meaning": "TextLoggerHook输出训练日志",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[1].interval",
+    "value": 10,
+    "meaning": "意图每10次迭代输出日志",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[2].type",
+    "value": "IterTimerHook",
+    "meaning": "IterTimerHook记录迭代时间",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[3].type",
+    "value": "EvaluationHook",
+    "meaning": "EvaluationHook发起验证",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[3].interval",
+    "value": 1,
+    "meaning": "意图每1轮执行一次验证",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[4].type",
+    "value": "EarlyStoppingHook",
+    "meaning": "EarlyStoppingHook表达自动早停策略",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[4].monitor",
+    "value": "cv_loss",
+    "meaning": "希望早停器观察cv_loss，而非训练损失",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[4].patience",
+    "value": 5,
+    "meaning": "希望在连续5次评估没有改善时停止",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "train.hooks[4].mode",
+    "value": "min",
+    "meaning": "min表示监控指标越低越好",
+    "reason": "表达保存、日志、计时、评估或早停意图",
+    "effect": "这些设置适用于通用hook机制；本文所用近场训练器自行控制训练循环，需在循环中接入相应功能后才会生效",
+    "check": "检查训练循环是否调用hook，而非只检查配置存在",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "evaluation.dataloader.batch_size_per_gpu",
+    "value": 256,
+    "meaning": "通用评估批大小字段256",
+    "reason": "专用评估器沿用预处理器打包方式",
+    "effect": "评估调用batch_size=64覆盖的是test_conf.batch_conf",
+    "check": "检查真正输入的batch长度",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "evaluation.dataloader.workers_per_gpu",
+    "value": 4,
+    "meaning": "验证/测试加载4个worker",
+    "reason": "并行准备评估音频",
+    "effect": "增大改变资源使用，不改变模型阈值",
+    "check": "检查worker错误和吞吐",
+    "related": ""
+  },
+  {
+    "group": "训练配置",
+    "key": "evaluation.dataloader.prefetch",
+    "value": 2,
+    "meaning": "评估每worker预取2批",
+    "reason": "减少输入等待",
+    "effect": "增加内存，不改变识别语义",
+    "check": "检查评估内存峰值",
+    "related": ""
+  },
+  {
+    "group": "配置与调用",
+    "key": "evaluation.metrics",
+    "value": [
+      "audio-noise-metric"
+    ],
+    "meaning": "保留audio-noise-metric名称",
+    "reason": "它来自通用配置元数据",
+    "effect": "该评估入口直接生成评分与DET统计，通用metric字段不参与这一流程",
+    "check": "检查evaluate末端实际函数",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.sample_rate",
+    "value": 16000,
+    "meaning": "每秒16000个采样点",
+    "reason": "与训练基座和监听设备配置一致",
+    "effect": "采样率不匹配改变时长与频率解释",
+    "check": "检查WAV头和设备实际采样率",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.channels",
+    "value": 1,
+    "meaning": "单声道输入",
+    "reason": "避免多通道被误当时间序列",
+    "effect": "立体声需要先确定选通道或混音策略",
+    "check": "检查解码后数组维度",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.sample_width",
+    "value": 2,
+    "meaning": "16bit PCM占2字节",
+    "reason": "生成训练格式pcm_s16le",
+    "effect": "改变位宽时需要同步解码方式；字节长度与浮点采样点数分别计算",
+    "check": "核对编码器输出",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.peak_headroom_db",
+    "value": 2.0,
+    "meaning": "峰值归一化后留2dB余量",
+    "reason": "给后续叠加留一定幅度空间",
+    "effect": "不是响度LUFS归一化；叠加仍可能削波",
+    "check": "统计峰值与削波比例",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.minimum_ms",
+    "value": 1050,
+    "meaning": "短录音补到1050ms",
+    "reason": "避免输入过短并随机移动词的位置",
+    "effect": "更长会增加背景比例，过短不能覆盖目标发音",
+    "check": "检查补齐后长度与语音位置",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.padding_position",
+    "value": "均匀随机前后分配",
+    "meaning": "把需要补齐的时间随机分给两侧",
+    "reason": "避免唤醒词总在固定起点",
+    "effect": "修改分布改变位置多样性",
+    "check": "检查若干输出波形",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.padding_type_weights",
+    "value": [
+      0.2,
+      0.4,
+      0.4
+    ],
+    "meaning": "静音、粉噪声、棕噪声的采样权重",
+    "reason": "让补齐部分不只有纯静音",
+    "effect": "权重增大对应底噪更常出现，不是性能权重",
+    "check": "统计生成类型占比",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.padding_gain_db",
+    "value": [
+      -50,
+      -35
+    ],
+    "meaning": "给生成噪声施加的幅度衰减",
+    "reason": "使补齐背景保持较轻",
+    "effect": "不是经语音RMS校准的精确信噪比",
+    "check": "计算实际语音与噪声RMS",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.noise_layers_weights",
+    "value": [
+      0.2,
+      0.4,
+      0.3,
+      0.1
+    ],
+    "meaning": "0/1/2/3层噪声的采样权重",
+    "reason": "保留20%不加噪样本，其余作不同叠加",
+    "effect": "多层增加变化，也可能削波或盖住语音",
+    "check": "统计层数、峰值和样例可懂度",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.noise_duration_ratio",
+    "value": [
+      0.2,
+      1.0
+    ],
+    "meaning": "每层噪声长度占录音20%到100%",
+    "reason": "制造局部与全程干扰",
+    "effect": "比例提高使噪声覆盖更长",
+    "check": "检查噪声起止位置",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.noise_gain_db",
+    "value": [
+      -50,
+      -25
+    ],
+    "meaning": "生成噪声的增益范围",
+    "reason": "限制噪声幅度，保持目标语音可辨",
+    "effect": "该值不是实测SNR；不要照注释写成25—50dB信噪比",
+    "check": "对最终混音分别计算SNR和削波",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.noise_peak_scale",
+    "value": 0.8,
+    "meaning": "噪声峰值归一化为16bit范围的80%",
+    "reason": "先给噪声本身留峰值余量",
+    "effect": "后续增益与叠加共同决定最终幅度",
+    "check": "检查int16转换前后最大值",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "audio.workers",
+    "value": 8,
+    "meaning": "主入口分配8个进程",
+    "reason": "并行进行CPU解码、FFT和导出",
+    "effect": "进程多可能争用磁盘；函数名含gpu不代表实际使用GPU",
+    "check": "观察CPU与磁盘吞吐",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "data.split_ratio",
+    "value": [
+      0.8,
+      0.1,
+      0.1
+    ],
+    "meaning": "随机分配80%训练、10%验证、其余测试",
+    "reason": "提供三个用途不同的集合",
+    "effect": "当前按样本打乱，不保证同说话人或同原始语句隔离",
+    "check": "按来源/说话人分组检查泄漏",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "data.seed",
+    "value": 42,
+    "meaning": "划分前固定Python随机种子",
+    "reason": "便于重复同一次文件顺序下的划分",
+    "effect": "不自动控制前序NumPy噪声与多进程增强",
+    "check": "记录所有随机源及输入清单",
+    "related": ""
+  },
+  {
+    "group": "增强与数据",
+    "key": "data.uid_width",
+    "value": 4,
+    "meaning": "样本编号至少四位补零",
+    "reason": "让列表便于排序与关联",
+    "effect": "编号排序不保证标签语义正确",
+    "check": "抽查音频内容与转录",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "train.checkpoint",
+    "value": "空字符串",
+    "meaning": "未指定恢复训练checkpoint",
+    "reason": "该训练器回退到模型仓库train/base.pt",
+    "effect": "不是随机初始化；传入有效路径时变成恢复/指定权重",
+    "check": "记录实际加载路径与权重指纹",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "train.trans_data",
+    "value": "训练标签合并文件",
+    "meaning": "脚本试图只提供训练标签",
+    "reason": "该转录索引同时供训练和验证清单查询样本标签",
+    "effect": "缺少验证UID会导致配对问题；标签索引与样本划分应分开理解",
+    "check": "核对两个wav.scp的UID在转录索引中均可找到",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "train.cv_trans_data",
+    "value": "dev/text",
+    "meaning": "脚本传入独立验证标签的意图",
+    "reason": "该版本没有读取此关键字",
+    "effect": "传入不会自动解决验证转录匹配",
+    "check": "检查kwargs的读取位置与历史版本",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "train.need_dump",
+    "value": true,
+    "meaning": "导出分词和映射后的数据清单",
+    "reason": "便于检查字符映射与配对",
+    "effect": "增加用于检查token映射的诊断清单；原始音频与标签仍按样本ID配对",
+    "check": "检查dump文件非空且UID一致",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "evaluate.average_num",
+    "value": 3,
+    "meaning": "按验证损失选择3个checkpoint平均",
+    "reason": "减少单次权重波动，是脚本的模型选择配置",
+    "effect": "更多模型不必更好，需统一结构及训练轨迹",
+    "check": "核对被选轮次及实际平均结果",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "evaluate.threshold",
+    "value": 0.5,
+    "meaning": "评估调用传入的阈值",
+    "reason": "希望复用关键词配置",
+    "effect": "该evaluate入口未读取它，而是输出候选再扫描DET阈值",
+    "check": "对比调用参数与统计文件生成逻辑",
+    "related": ""
+  },
+  {
+    "group": "训练调用",
+    "key": "evaluate.return_value",
+    "value": "None（所查实现）",
+    "meaning": "函数末尾打印统计文件映射但没有return",
+    "reason": "评估结果通过评分文件、统计文件和终端输出提供；Python函数返回值另行检查",
+    "effect": "eval_metrics可能是None，不等于没生成评分文件",
+    "check": "分别检查返回值、score与stats文件",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.sample_rate",
+    "value": 16000,
+    "meaning": "监听采样率",
+    "reason": "与目标模型一致",
+    "effect": "改变需同步重采样、窗口样本数和前端",
+    "check": "记录设备参数与输入长度",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.blocksize",
+    "value": "3200（监听）/ 1600（导出）",
+    "meaning": "在16kHz下分别对应200ms与100ms回调间隔",
+    "reason": "两个版本采用不同的采集更新频率",
+    "effect": "更小更新更勤但调度开销更大；与推理窗口长度不同，也不是总识别延迟",
+    "check": "分别核对两个入口的blocksize，并测回调间隔和推理耗时",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.buffer_samples",
+    "value": 24000,
+    "meaning": "保存最近1.5秒浮点音频",
+    "reason": "覆盖目标短语并维持上下文",
+    "effect": "更长增加重算量，过短可能截断慢速发音",
+    "check": "用不同语速检查窗口覆盖",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.event_wait_s",
+    "value": 0.1,
+    "meaning": "主循环等待事件最多100ms",
+    "reason": "允许循环定期检查状态",
+    "effect": "它不是采样周期；事件多次set可能合并",
+    "check": "记录生产和消费计数",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.fsm_timeout_s",
+    "value": 1.5,
+    "meaning": "部分匹配状态的超时重置门限",
+    "reason": "避免长时间保留不完整目标序列",
+    "effect": "该逻辑使用主机墙钟时间，严格限制词间间隔时需要改用音频帧时间",
+    "check": "用固定帧时间戳复核超时语义",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.cooldown_s",
+    "value": 1.0,
+    "meaning": "触发后主循环暂停1秒",
+    "reason": "减少连续输出同一事件",
+    "effect": "期间采集回调仍可能继续，睡眠不等于停止采集",
+    "check": "检查回调、缓冲和恢复时序",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.clear_after_trigger",
+    "value": true,
+    "meaning": "冷却后清空音频缓冲",
+    "reason": "减少残留语音被再次处理",
+    "effect": "需要和解码状态、并发访问一起处理",
+    "check": "重复播放同段音频检查去重",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.rms_indicator",
+    "value": 0.01,
+    "meaning": "终端有声标记阈值",
+    "reason": "帮助观察麦克风是否采到明显声音",
+    "effect": "当前只控制显示符号，不门控infer调用",
+    "check": "静音输入也跟踪推理次数",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.device",
+    "value": "cpu",
+    "meaning": "部署脚本使用CPU",
+    "reason": "便于本地推理且无需部署GPU",
+    "effect": "切换设备时同步迁移模型和张量，并测量采集与推理的总耗时",
+    "check": "测真实设备上的耗时",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.load_strict",
+    "value": false,
+    "meaning": "允许load_state_dict存在缺失或多余键",
+    "reason": "尝试兼容不同包装层的权重键",
+    "effect": "返回缺失/多余键必须核对，否则可能几乎未加载而不报错",
+    "check": "记录missing_keys和unexpected_keys",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.fallback_token_ids",
+    "value": [
+      1463,
+      1329,
+      1463,
+      1329
+    ],
+    "meaning": "回退逻辑指定的目标字符ID",
+    "reason": "作为词表解析失败时的回退",
+    "effect": "词表读取会减1，训练索引应为1462/1328；当前回退存在一位偏移风险",
+    "check": "使用同一tokens文件和读取规则重建映射",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.frontend_export_dim",
+    "value": 240,
+    "meaning": "导出脚本备用前端拼接Mel及一二阶差分",
+    "reason": "试图构建更丰富的特征",
+    "effect": "80×3得到240维，与400维输入层不匹配，需要按训练规则调整特征处理",
+    "check": "运行前检查特征形状",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.frontend_server_lfr",
+    "value": [
+      5,
+      1
+    ],
+    "meaning": "监听脚本备用前端拼5帧但每帧移动1",
+    "reason": "把宽度改为400",
+    "effect": "虽然宽度对上，仍与训练frame_skip=3及Kaldi前端不等价",
+    "check": "同一音频比较前端逐阶段数值",
+    "related": ""
+  },
+  {
+    "group": "运行与状态",
+    "key": "runtime.exception_return",
+    "value": false,
+    "meaning": "推理异常直接返回未检测到",
+    "reason": "使主循环继续运行的容错尝试",
+    "effect": "错误和真实未唤醒被混在一起，会掩盖故障",
+    "check": "分别统计异常、正常拒绝和触发",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "ctc.blank_id",
+    "value": 0,
+    "meaning": "无输出符号的索引",
+    "reason": "用于CTC路径对齐",
+    "effect": "blank表示该帧不输出字符；未知字符和静音检测使用不同的定义",
+    "check": "核对tokens文件ID1减1得到0",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "ctc.target_ids",
+    "value": [
+      1462,
+      1328,
+      1462,
+      1328
+    ],
+    "meaning": "按字符词表及read_token得到的训练索引",
+    "reason": "保持小—团—小—团顺序",
+    "effect": "词表换版本时必须重算，不跨模型套用数字",
+    "check": "核对字符→文件ID→网络ID",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "decoder.score_beam_size",
+    "value": 3,
+    "meaning": "每帧先保留全词表top3",
+    "reason": "减少前缀扩展数量",
+    "effect": "更宽增加开销，可能保留被截掉的目标字符",
+    "check": "在相同音频上对照候选召回",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "decoder.path_beam_size",
+    "value": 20,
+    "meaning": "每步保留20条前缀",
+    "reason": "保留多种时序对齐解释",
+    "effect": "加宽更耗时，不保证误触发降低",
+    "check": "记录候选数与耗时",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "decoder.token_floor",
+    "value": 0.05,
+    "meaning": "帧概率必须严格大于0.05才参与扩展",
+    "reason": "过滤很弱的候选",
+    "effect": "不是最终唤醒阈值；提高可能丢失弱发音",
+    "check": "比较候选路径是否被提前剪掉",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "decoder.candidate_score",
+    "value": "sqrt(product(node_probs))",
+    "meaning": "关键词节点概率乘积开平方",
+    "reason": "上游评估器用它构建候选置信分数",
+    "effect": "不是分类准确率，不与逐帧0.5阈值混用",
+    "check": "手算一个四字符例子并检查实现",
+    "related": ""
+  },
+  {
+    "group": "CTC与词表",
+    "key": "det.score_step",
+    "value": 0.001,
+    "meaning": "DET统计从0到1扫描的步长",
+    "reason": "形成不同阈值的工作点",
+    "effect": "步长更小增加统计点，不提高原始分数精度",
+    "check": "检查score文件保留的小数位",
+    "related": ""
+  },
+  {
+    "group": "权重与资源",
+    "key": "checkpoint.cmvn_mean_istd",
+    "value": [
+      400,
+      400
+    ],
+    "meaning": "保存的均值和逆标准差各400项",
+    "reason": "将输入映射到训练使用的归一化尺度",
+    "effect": "这些数值作为buffer保存；改为逐窗口归一化会改变模型的输入分布",
+    "check": "验证加载后实际进入GlobalCMVN.forward",
+    "related": ""
+  },
+  {
+    "group": "权重与资源",
+    "key": "checkpoint.trainable_parameters",
+    "value": 756133,
+    "meaning": "骨干及输出层可训练参数数量",
+    "reason": "按实际权重张量形状逐层求和",
+    "effect": "结构变化后重新计算各层参数，并将归一化buffer另列",
+    "check": "对state_dict排除800项CMVN后求和",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.name",
+    "value": "小 团 小 团",
+    "meaning": "目标关键词，按字符加空格",
+    "reason": "使原生词条与目标字符序列一致",
+    "effect": "修改目标词需要同步标签、token与评估",
+    "check": "检查规范化后的关键词",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.lm_boost",
+    "value": 0.0,
+    "meaning": "语言分数增益接口",
+    "reason": "0不加额外语言分数偏置",
+    "effect": "非零作用位置由原生后端决定",
+    "check": "用同一音频和后端对照",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.am_boost",
+    "value": -0.05,
+    "meaning": "声学分数增益接口",
+    "reason": "设置为-0.05，属于原生资源调节",
+    "effect": "这是原生后端的声学分数调节接口；Python顺序匹配器不读取此项，具体调整效果需在对应后端测试",
+    "check": "核查真实使用的后端",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.min_dur",
+    "value": 0.25,
+    "meaning": "最小候选时长0.25秒",
+    "reason": "原生词条约束",
+    "effect": "顺序匹配器没有读取该字段",
+    "check": "检查时长条件是否实际执行",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.max_dur",
+    "value": 2.5,
+    "meaning": "最大候选时长2.5秒",
+    "reason": "限制原生候选的时间跨度",
+    "effect": "不等于1.5秒音频缓冲，Python FSM未读取",
+    "check": "按音频帧时间测试慢速长词",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.threshold1",
+    "value": 0.5,
+    "meaning": "关键词阈值0.50",
+    "reason": "原生候选与Python逐帧筛选均借用此字段",
+    "effect": "两个解码路径使用不同分数，需要分别选取合适的工作点",
+    "check": "分别校准两条解码路径",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.type",
+    "value": "wakeup",
+    "meaning": "词条类型wakeup",
+    "reason": "向原生资源声明用途",
+    "effect": "不会改变网络结构",
+    "check": "检查后端词条加载",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.activation",
+    "value": true,
+    "meaning": "词条启用标记",
+    "reason": "true表示配置中启用",
+    "effect": "Python脚本直接取首个词条，未使用此开关过滤",
+    "check": "检查实际加载逻辑",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.high_threshold",
+    "value": 90.0,
+    "meaning": "原生附加阈值90",
+    "reason": "沿用资源字段",
+    "effect": "该值属于原生接口的附加阈值，不在softmax概率域内；Python判定路径不读取此项",
+    "check": "查原生接口或做黑盒对照",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.is_main",
+    "value": true,
+    "meaning": "原生主词标记",
+    "reason": "用于词条角色声明",
+    "effect": "不意味着多关键词调度已在Python实现",
+    "check": "检查读取字段的代码",
+    "related": ""
+  },
+  {
+    "group": "关键词配置",
+    "key": "keyword.cc_name",
+    "value": "上游附加资源名称（保留）",
+    "meaning": "原生附加资源引用名称",
+    "reason": "保留上游资源名称",
+    "effect": "名字存在不证明附加模型已启用或已适配目标词",
+    "check": "检查资源启用开关与实际文件",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.state_ptr",
+    "value": "0…4",
+    "meaning": "当前已经匹配的目标字符数",
+    "reason": "用一个整数记录顺序匹配进度",
+    "effect": "错误推进或跨窗口重复累计可能造成误触发",
+    "check": "用固定字符序列逐帧检查状态",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.max_state",
+    "value": 4,
+    "meaning": "目标token序列的长度",
+    "reason": "小团小团有四个字符",
+    "effect": "更换关键词时，从token序列长度计算新的终止状态",
+    "check": "断言等于len(keyword_tokens)",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.last_trigger_time",
+    "value": "运行时墙钟时间",
+    "meaning": "最近一次成功推进字符时记录的主机时间",
+    "reason": "为部分匹配提供超时判断",
+    "effect": "墙钟与音频时间不同；整窗处理时多个字符可能记录相近墙钟",
+    "check": "同时记录音频帧索引与主机时间",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.keyword_tokens",
+    "value": [
+      1463,
+      1329,
+      1463,
+      1329
+    ],
+    "meaning": "当前回退逻辑产生的期待字符索引",
+    "reason": "驱动逐字符匹配",
+    "effect": "映射应采用与训练相同的词表读取规则，本例对应1462/1328",
+    "check": "按真实词表初始化并写映射断言",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.feats_len",
+    "value": "随窗口变化的整数",
+    "meaning": "提取后特征的有效时间步数",
+    "reason": "用于需要长度的接口",
+    "effect": "长度参数与缓存参数具有不同的形状和用途，调用时按接口签名传入",
+    "check": "核对调用签名和维度",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.best_ids",
+    "value": "每帧一个类别索引",
+    "meaning": "对帧级概率取argmax的结果",
+    "reason": "简化为每帧最可能字符后做状态推进",
+    "effect": "丢失其他候选，不等价于保留多条路径的CTC搜索",
+    "check": "构造目标字符不是top1的输入作对照",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.event",
+    "value": "set / clear",
+    "meaning": "采集与推理之间的二值通知",
+    "reason": "让主循环等待新音频而不是空转",
+    "effect": "多次set可能合并；需要逐块处理时，可使用带计数或时间标记的队列",
+    "check": "对比采集回调与处理次数",
+    "related": ""
+  },
+  {
+    "group": "运行状态变量",
+    "key": "state.running",
+    "value": "True / False",
+    "meaning": "监听循环是否继续",
+    "reason": "控制启动、退出和资源释放",
+    "effect": "只改标志不自动关闭底层设备流",
+    "check": "检查退出路径是否释放音频流",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::debug_mode",
+    "value": "false",
+    "meaning": "调试开关",
+    "reason": "正常部署关闭调试信息，避免日志负担",
+    "effect": "开启主要增加可观测性和I/O；不应改变任务定义",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::dump_feat_mode",
+    "value": "false",
+    "meaning": "是否转储声学特征",
+    "reason": "默认关闭，避免额外磁盘占用",
+    "effect": "排查前端差异时可用；开启前估计文件量",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::log_file",
+    "value": "kws.log",
+    "meaning": "原生日志文件路径",
+    "reason": "将诊断输出定位到文件",
+    "effect": "更改路径影响日志保存位置；不是模型性能参数",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::reset_frames",
+    "value": "6000",
+    "meaning": "原生配置中的重置帧数",
+    "reason": "用于运行状态管理的接口项",
+    "effect": "重置时间取决于后端的帧计数规则，需要结合实际输入步长与运行行为换算",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_score_file",
+    "value": "",
+    "meaning": "声学分数输出文件接口",
+    "reason": "空值不指定分数导出文件",
+    "effect": "是否导出及格式由原生实现决定；不等同最终检测分数",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::lexicon_file",
+    "value": "kwsr.lex",
+    "meaning": "词典资源路径",
+    "reason": "将词条与后端使用的单元关联",
+    "effect": "必须与phone table和网络类别保持一致",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::phone_table_file",
+    "value": "kwsr.phn",
+    "meaning": "原生输出单元表路径",
+    "reason": "决定网络输出ID的资源侧含义",
+    "effect": "改顺序可能语义错位，即使文件仍能打开",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::fillers_file",
+    "value": "kwsr.gbg",
+    "meaning": "填充/非目标词资源路径",
+    "reason": "组织背景或非关键词路径的配置资源",
+    "effect": "改变背景路径资源会影响搜索过程，需与负样本评估配合检查",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::build_graph_acoustic_scale",
+    "value": "0.1",
+    "meaning": "原生声学分数缩放接口",
+    "reason": "协调原生图搜索中的分数尺度",
+    "effect": "不是音频音量；改变可能影响候选排序与阈值",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::fillers_cdphone_ext",
+    "value": "NO_EXT",
+    "meaning": "填充路径上下文相关单元扩展方式",
+    "reason": "NO_EXT表示该接口关闭扩展",
+    "effect": "开启扩展时需要配套的单元表、词典与后端支持",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::keyword_cdphone_ext_opt",
+    "value": "NO_EXT",
+    "meaning": "关键词路径上下文扩展选项",
+    "reason": "默认NO_EXT，沿用模型资源约定",
+    "effect": "更改需后端文档与资源支持",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_file",
+    "value": "kwsr",
+    "meaning": "声学模型资源前缀",
+    "reason": "kwsr用于关联相应模型文件",
+    "effect": "必须与实际资源文件名配套",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_nn_file",
+    "value": "kwsr",
+    "meaning": "神经网络资源前缀",
+    "reason": "将运行器指向当前网络资源",
+    "effect": "不要混用task1和task2的输出维度",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_nn_format",
+    "value": "kaldi_nnet1",
+    "meaning": "原生网络格式",
+    "reason": "匹配导出工具与加载器",
+    "effect": "换格式需相应转换和运行后端支持",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_nn_quant",
+    "value": "16bit",
+    "meaning": "原生配置声明的网络精度类型",
+    "reason": "降低部署资源开销的工程选择",
+    "effect": "位宽影响资源体积与计算方式；具体数值格式由转换工具定义，运行速度通过设备测试确定",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_use_logsoftmax",
+    "value": "false",
+    "meaning": "是否使用log-softmax输出的后端约定",
+    "reason": "false与当前导出Softmax网络的接口配套",
+    "effect": "切换概率/对数域需同时调整后端分数计算",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::input_batch_size",
+    "value": "1",
+    "meaning": "原生接口输入批处理大小",
+    "reason": "1是资源中给定的小批处理设置",
+    "effect": "增大可能改变吞吐、等待及内存，精确行为需目标后端验证",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::output_batch_size",
+    "value": "1",
+    "meaning": "原生接口输出批处理大小",
+    "reason": "1对应当前输出组织",
+    "effect": "控制原生接口的输出组织，与训练批大小和词表类别数分别设置",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::lazy_evaluation",
+    "value": "false",
+    "meaning": "原生延迟计算策略开关",
+    "reason": "当前false不启用该策略",
+    "effect": "开启后由原生后端调整执行时机，收益需要通过耗时与内存对照测试确定",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::global_beam",
+    "value": "5.0",
+    "meaning": "原生配置中的搜索裁剪项",
+    "reason": "属于后端搜索策略接口",
+    "effect": "搜索宽度变化会影响候选保留、开销与识别结果，沿用匹配资源后逐项对照调整",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::gbg_beam",
+    "value": "0.5",
+    "meaning": "原生配置中的搜索裁剪项",
+    "reason": "属于后端搜索策略接口",
+    "effect": "背景路径的搜索设置需要与关键词路径配合，通过误触发及耗时对照选择",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::acoustic_scale",
+    "value": "0.1",
+    "meaning": "原生声学分数缩放接口",
+    "reason": "协调原生图搜索中的分数尺度",
+    "effect": "不是音频音量；改变可能影响候选排序与阈值",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::hash_table_size",
+    "value": "1024",
+    "meaning": "原生搜索哈希表容量参数",
+    "reason": "1024为资源给定的容器设置",
+    "effect": "可能影响搜索数据结构的内存和扩展，非网络参数量",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::hash_ratio",
+    "value": "2.0",
+    "meaning": "原生哈希容器相关比例",
+    "reason": "2.0是后端资源设置",
+    "effect": "属于搜索容器配置；一般保留后端默认值，在明确出现容量或性能问题时再调整",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::token_pool_realloc",
+    "value": "1024",
+    "meaning": "原生搜索token内存池扩展参数",
+    "reason": "1024是内存管理配置",
+    "effect": "不是词表类别数，也不是关键词长度",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::default_wuw_threshold1",
+    "value": "0.01",
+    "meaning": "没有词级阈值覆盖时的默认唤醒阈值接口",
+    "reason": "0.01为资源缺省值；实际关键词还提供threshold1",
+    "effect": "词级阈值可能覆盖缺省值，选工作点前先确认最终生效的配置",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::default_wuw_threshold2",
+    "value": "0.0",
+    "meaning": "第二缺省阈值接口",
+    "reason": "0.0为当前资源默认",
+    "effect": "属于后端的第二缺省阈值接口，具体用途随识别实现而定，调整时比较实际输出",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::kws_mode",
+    "value": "true",
+    "meaning": "原生识别器的关键词检测模式",
+    "reason": "true选择KWS用途",
+    "effect": "关闭可能切换识别语义，需要对应后端支持",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::prefix_kws",
+    "value": "false",
+    "meaning": "原生前缀唤醒相关模式开关",
+    "reason": "当前false，沿用现有资源",
+    "effect": "它是原生模式开关，与decoder_type选择ctc-prefix解码器属于不同配置层",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::num_history_frames",
+    "value": "0",
+    "meaning": "原生额外历史帧设置",
+    "reason": "0为此资源给定值",
+    "effect": "此项管理后端额外历史帧；网络自身的FSMN记忆由滤波抽头控制",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_phones_exc",
+    "value": "W_*:rr*:lv*",
+    "meaning": "声学单元排除模式字符串",
+    "reason": "为原生资源指定排除规则",
+    "effect": "通配模式含义属于该资源契约，改动须核查实际单元表",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::use_cc",
+    "value": "false",
+    "meaning": "是否启用附加cc模块",
+    "reason": "当前资源显式关闭",
+    "effect": "关闭时主识别流程不使用该附加模块；开启时需要对应资源和接口支持",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::cc_model",
+    "value": "scp:kwsr.ccl",
+    "meaning": "附加cc模块模型路径",
+    "reason": "资源存在但use_cc=false时不应宣称参与判定",
+    "effect": "启用需完整对应模型和接口验收",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::cc_nn_quant",
+    "value": "32bit",
+    "meaning": "cc模块精度声明",
+    "reason": "32bit对应附加模块的资源接口",
+    "effect": "use_cc=false时不是主网络的精度设置",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::sil_am_boost",
+    "value": "0.0",
+    "meaning": "静音声学分数增益接口",
+    "reason": "0.0表示不给该接口额外增益",
+    "effect": "不是录音静音检测阈值",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.Decimate::begin-frame",
+    "value": "0",
+    "meaning": "降帧起始相位",
+    "reason": "0从起始帧开始抽取",
+    "effect": "改相位改变与输入帧的对齐，不会改变词表",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.output-type",
+    "value": "FE_LOGFB+P+Dec3",
+    "meaning": "声学特征及降帧类型串",
+    "reason": "FE_LOGFB+P+Dec3对应对数滤波特征及三倍降帧约定",
+    "effect": "换类型要同步模型输入维度和CMVN",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.input-type",
+    "value": "FE_16K_16BIT_PCM",
+    "meaning": "输入字节格式",
+    "reason": "FE_16K_16BIT_PCM要求16k、16bit PCM",
+    "effect": "错误采样率、位宽或字节序会导致错误声音解释",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.Waveform2Filterbank::dither",
+    "value": "1",
+    "meaning": "原生前端微小随机扰动",
+    "reason": "资源给定1，与其训练前端保持一致",
+    "effect": "扰动幅度依赖波形数值尺度，PCM域与归一化浮点域需要分别处理",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.Waveform2Filterbank::htk-compat",
+    "value": "false",
+    "meaning": "HTK兼容特征约定",
+    "reason": "false采用当前Kaldi式资源约定",
+    "effect": "开启可能改变能量/特征定义，须与训练一致",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.Waveform2Filterbank::window-type",
+    "value": "hamming",
+    "meaning": "原生分帧窗函数",
+    "reason": "hamming与公开前端约定一致",
+    "effect": "替换会改变频谱分布",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.Waveform2Filterbank::num-mel-bins",
+    "value": "80",
+    "meaning": "原生资源Mel维度",
+    "reason": "原生资源使用80维，与模型声学输入频带数一致",
+    "effect": "改频带数需同步上下文拼接、归一化与网络输入",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.ContextExpansion::minus",
+    "value": "2",
+    "meaning": "上下文拼接左帧数",
+    "reason": "左2帧与当前及右2帧组成80×5=400维输入",
+    "effect": "增加会改变输入宽度和历史跨度，需要同步权重与归一化",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.ContextExpansion::plus",
+    "value": "2",
+    "meaning": "上下文拼接右帧数",
+    "reason": "右2帧提供基础帧级未来信息，与400维输入配置配套",
+    "effect": "增加会改变输入宽度与未来等待，需要重做一致性检查",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::am_nn_type",
+    "value": "kaldi",
+    "meaning": "神经网络类型接口",
+    "reason": "kaldi选择对应网络格式读取路径",
+    "effect": "决定网络资源的读取格式，训练框架由训练流程另行定义",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.KwsrRecognizer::decoder_type",
+    "value": "ctc-prefix",
+    "meaning": "选择原生CTC前缀解码器",
+    "reason": "与逐帧CTC输出对接",
+    "effect": "不意味着它与Python解码逐行相同",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcWinDecoder::ctc_print_score",
+    "value": "false",
+    "meaning": "对应解码器是否打印分数",
+    "reason": "false减少输出",
+    "effect": "调试信息不等于改变检测阈值",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcWinDecoder::ctc_shift_frame",
+    "value": "10",
+    "meaning": "窗口式CTC解码器的窗口移动设置",
+    "reason": "当前选中的是ctc-prefix，不应直接把窗口分支设置写为生效",
+    "effect": "仅在对应解码器被选中时解释影响",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcWinDecoder::ctc_frame_len",
+    "value": "70",
+    "meaning": "窗口式CTC解码器的窗口长度设置",
+    "reason": "70属于窗口解码分支配置",
+    "effect": "只在对应窗口解码器被选中时解释其影响；ctc-prefix路径使用自身的判定逻辑",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcPrefixDecoder::ctc_print_score",
+    "value": "false",
+    "meaning": "对应解码器是否打印分数",
+    "reason": "false减少输出",
+    "effect": "调试信息不等于改变检测阈值",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcPrefixDecoder::ctc_prefix_score_beam",
+    "value": "3",
+    "meaning": "前缀解码每帧候选宽度",
+    "reason": "3减少类别扩展数量",
+    "effect": "增大会增加搜索开销，需实际评测",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcPrefixDecoder::ctc_prefix_path_beam",
+    "value": "20",
+    "meaning": "前缀解码保留路径宽度",
+    "reason": "20保留多种对齐候选",
+    "effect": "增大搜索更宽但更耗时，不保证误报下降",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  },
+  {
+    "group": "原生资源接口",
+    "key": "native.CtcPrefixDecoder::ctc_prefix_use_filter",
+    "value": "true",
+    "meaning": "前缀解码过滤策略开关",
+    "reason": "true启用原生过滤接口",
+    "effect": "控制原生前缀解码过滤策略，调整时通过候选输出和识别结果对照验证",
+    "check": "在匹配的原生资源与后端中做单项对照，观察识别结果、耗时及资源使用",
+    "related": ""
+  }
+]

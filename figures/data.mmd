@@ -1,0 +1,9 @@
+flowchart TB
+A["MP3 → 16k / 16bit / mono WAV"] --> B{"时长是否小于1050ms？"}
+B -->|是| C["随机前后补齐<br/>静音 / 粉噪声 / 棕噪声"]
+B -->|否| D["随机0—3层噪声<br/>变化时长、增益、插入位置"]
+C --> E["数量校验与字符标注"]
+D --> E
+E --> F["固定seed=42，按样本打乱"] --> G["训练80% / 验证10% / 测试其余"]
+class C,D,E focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

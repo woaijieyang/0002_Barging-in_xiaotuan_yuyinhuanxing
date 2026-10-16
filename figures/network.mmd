@@ -1,0 +1,16 @@
+flowchart TB
+subgraph IN[01 输入映射]
+direction LR
+A["特征 B × T × 400"] --> B["Affine 400→140"] --> C["Affine 140→250<br/>ReLU"]
+end
+subgraph MEM[02 时间建模：每块250→128→250，左10 / 右2抽头]
+direction LR
+D1["cFSMN 1"] --> D2["cFSMN 2"] --> D3["cFSMN 3"] --> D4["cFSMN 4"]
+end
+subgraph OUT[03 字符输出]
+direction LR
+E["Affine 250→140"] --> F["Affine 140→2599"] --> G["逐帧字符logits"]
+end
+IN --> MEM --> OUT
+class D1,D2,D3,D4,F focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

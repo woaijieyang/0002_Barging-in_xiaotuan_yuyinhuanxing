@@ -1,0 +1,11 @@
+flowchart TB
+A["250维表示"] --> B["无偏置投影 250→128"]
+B --> C["当前投影值"]
+B --> D["左滤波<br/>当前＋过去9帧"]
+B --> E["右滤波<br/>未来1、2帧"]
+C --> F["逐通道相加"]
+D --> F
+E --> F
+F --> G["Affine 128→250 + ReLU"]
+class B,F,G focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

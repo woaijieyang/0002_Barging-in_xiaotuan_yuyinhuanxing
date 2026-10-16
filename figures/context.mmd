@@ -1,0 +1,8 @@
+flowchart TB
+subgraph F[基础帧：相邻间隔10ms]
+direction LR
+A["t−2"] --- B["t−1"] --- C["t"] --- D["t＋1"] --- E["t＋2"]
+end
+F --> G["拼接：5 × 80 = 400维"] --> H["每3帧取一次：约30ms一步"] --> I["全局CMVN<br/>减400维均值，再乘逆标准差"]
+class G,H,I focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

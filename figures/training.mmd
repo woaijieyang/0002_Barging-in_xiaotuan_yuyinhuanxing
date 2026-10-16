@@ -1,0 +1,16 @@
+flowchart TB
+subgraph D[输入处理]
+direction LR
+A["读取音频与标签"] --> B["Fbank与训练增强"] --> C["拼接、降帧、批处理"]
+end
+subgraph U[模型更新]
+direction LR
+E["网络前向"] --> F["CTC loss"] --> G["反向传播与裁剪"] --> H["Adam更新"]
+end
+subgraph V[每轮检查]
+direction LR
+I["关闭增强做验证"] --> J["保存权重与cv_loss"] --> K["调度学习率"]
+end
+D --> U --> V
+class B,F,G,J focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

@@ -1,0 +1,12 @@
+flowchart TB
+subgraph O[上游离线评估]
+direction LR
+A["softmax帧概率"] --> B["top3 + 0.05过滤"] --> C["前缀更新 / top20路径"] --> D["目标节点合成候选分数"]
+end
+subgraph L[实时监听]
+direction LR
+E["softmax帧概率"] --> F["argmax字符"] --> G["超过逐帧阈值且符合期待字符"] --> H["state_ptr前进 / 触发"]
+end
+O ~~~ L
+class C,D,G,H focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

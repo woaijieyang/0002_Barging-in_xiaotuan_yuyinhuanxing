@@ -1,0 +1,12 @@
+flowchart TB
+subgraph T[离线：把目标数据变成可部署权重]
+direction LR
+A["音频整理与标注校验"] --> B["数据划分与训练入口"] --> C["预训练 cFSMN<br/>目标任务微调"] --> D["评分、模型选择<br/>与资源整理"]
+end
+subgraph R[在线：把连续声音变成唤醒事件]
+direction LR
+E["16 kHz 麦克风"] --> F["窗口与特征处理"] --> G["字符分数输出"] --> H["状态匹配与冷却"] --> I["唤醒事件"]
+end
+T -->|权重、配置、词表| R
+class A,B,D,F,H focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

@@ -1,0 +1,20 @@
+flowchart TB
+subgraph OBS[01 留住这一次没有回应的情况]
+direction LR
+A["保存几秒录音"] --> B["回放听是否清楚"] --> C["保留程序的提示与报错"]
+end
+subgraph CHECK[02 根据现象选择检查位置]
+direction LR
+D["录音不清楚<br/>检查输入设备与音量"]
+E["录音清楚，但计算报错<br/>检查音频处理与模型调用"]
+I["已有字符分数，仍不触发<br/>检查字符编号与判定规则"]
+D ~~~ E ~~~ I
+end
+subgraph FIX[03 修改对应部分，再试一次]
+direction LR
+F["重放同一段录音"] --> G["再试正常呼叫<br/>静音与半句"] --> H["接回麦克风<br/>检查一次与再次呼叫"]
+end
+OBS --> CHECK
+CHECK --> FIX
+class B,E,F,G focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;

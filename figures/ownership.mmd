@@ -1,0 +1,12 @@
+flowchart TB
+subgraph BASE[复用基础能力]
+direction LR
+A["cFSMN / CTC"] --- B["预训练 checkpoint"] --- C["PyTorch / ModelScope"]
+end
+subgraph WORK[项目工作]
+direction LR
+D["音频与标签工具"] --> E["训练与评估组织"] --> F["模型接口适配"] --> G["持续监听与事件管理"]
+end
+BASE -->|结构、表征与框架接口| WORK
+class D,E,F,G focus
+classDef focus fill:#8e1728,color:#fff,stroke:#8e1728;
